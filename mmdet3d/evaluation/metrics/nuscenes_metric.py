@@ -236,11 +236,17 @@ class NuScenesMetric(BaseMetric):
             'v1.0-mini': 'mini_val',
             'v1.0-trainval': 'val',
         }
+        if self.ann_file.strip(".pkl").endswith("val_clear"):
+            eval_set = "val_subset"
+        elif self.ann_file.strip(".pkl").endswith("val_clear_mini"):
+            eval_set = "val_subset_mini"
+        else:
+            eval_set = eval_set_map[self.version]
         nusc_eval = NuScenesEval(
             nusc,
             config=self.eval_detection_configs,
             result_path=result_path,
-            eval_set=eval_set_map[self.version],
+            eval_set=eval_set,
             output_dir=output_dir,
             verbose=False)
         nusc_eval.main(render_curves=False)
