@@ -7,6 +7,7 @@ import cv2
 import mmcv
 import numpy as np
 import torch
+from mmcv.image import imresize
 from mmcv.transforms import BaseTransform, Compose, RandomResize, Resize
 from mmdet.datasets.transforms import (PhotoMetricDistortion, RandomCrop,
                                        RandomFlip)
@@ -2172,6 +2173,152 @@ class RandomCrop3D(RandomCrop):
 
 
 @TRANSFORMS.register_module()
+class GaussianNoise(BaseTransform):
+    """Apply Gaussian noise to the image.
+
+    Required Keys:
+
+    - img (np.ndarray): Image to be transformed.
+
+    Modified Keys:
+
+    - img (np.ndarray): Transformed image.
+    """
+
+    def __init__(self, p: float = 0.5, mean: float = 0.0, std: float = 10.0) -> None:
+        self.p = p
+        self.mean = mean
+        self.std = std
+
+    def transform(self, results: dict) -> dict:
+        """Transform function to apply Gaussian noise to the image.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Result dict with images transformed.
+        """
+        assert 'img' in results, '`img` is not found in results'
+        if isinstance(results["img"], list):
+            imgs = results['img']
+        else:
+            imgs = [results['img']]
+
+        for i, img in enumerate(imgs):
+            if np.random.rand() > self.p:
+                continue
+            
+            img = img.astype(np.float32)
+            noise = np.random.normal(self.mean, self.std, img.shape).astype(
+                np.float32)
+            imgs[i] = np.clip(img + noise, 0, 255).astype(np.float32)
+
+        return results
+
+    def __repr__(self) -> str:
+        """str: Return a string that describes the module."""
+        repr_str = self.__class__.__name__
+        repr_str += f'(mean={self.mean}, std={self.std})'
+        return repr_str
+
+
+@TRANSFORMS.register_module()
+class GaussianBlur(BaseTransform):
+    """Apply Gaussian filter to blur the image.
+
+    Required Keys:
+
+    - img (np.ndarray): Image to be transformed.
+
+    Modified Keys:
+
+    - img (np.ndarray): Transformed image.
+    """
+
+    def __init__(self, p: float = 0.5, kernel_size: int = 5, std_x: float = 0.0, std_y: float = 0.0) -> None:
+        self.p = p
+        self.kernel_size = kernel_size
+        self.std_x = std_x
+        self.std_y = std_y
+
+    def transform(self, results: dict) -> dict:
+        """Transform function to apply Gaussian noise to the image.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Result dict with images transformed.
+        """
+        assert 'img' in results, '`img` is not found in results'
+        if isinstance(results["img"], list):
+            imgs = results['img']
+        else:
+            imgs = [results['img']]
+
+        for i, img in enumerate(imgs):
+            if np.random.rand() > self.p:
+                continue
+            imgs[i] = cv2.GaussianBlur(img, (self.kernel_size, self.kernel_size), self.std_x, self.std_y)
+
+        return results
+
+    def __repr__(self) -> str:
+        """str: Return a string that describes the module."""
+        repr_str = self.__class__.__name__
+        repr_str += f'(mean={self.mean}, var={self.var})'
+        return repr_str
+
+
+@TRANSFORMS.register_module()
+class DownAndUp(BaseTransform):
+    """Apply down and upsampling to the image.
+
+    Required Keys:
+
+    - img (np.ndarray): Image to be transformed.
+
+    Modified Keys:
+
+    - img (np.ndarray): Transformed image.
+    """
+
+    def __init__(self, p: float = 0.5, downsampling_factor: int = 10) -> None:
+        self.p = p
+        self.downsampling_factor = downsampling_factor
+
+    def transform(self, results: dict) -> dict:
+        """Transform function to apply Gaussian noise to the image.
+
+        Args:
+            results (dict): Result dict from loading pipeline.
+
+        Returns:
+            dict: Result dict with images transformed.
+        """
+        assert 'img' in results, '`img` is not found in results'
+        if isinstance(results["img"], list):
+            imgs = results['img']
+        else:
+            imgs = [results['img']]
+
+        for i, img in enumerate(imgs):
+            if np.random.rand() > self.p:
+                continue
+            h, w, _ = img.shape
+            imgs[i] = imresize(imresize(img, (w//self.downsampling_factor, h//self.downsampling_factor)), (w, h))
+
+        return results
+
+    def __repr__(self) -> str:
+        """str: Return a string that describes the module."""
+        repr_str = self.__class__.__name__
+        repr_str += f'(mean={self.mean}, var={self.var})'
+        return repr_str
+
+
+@TRANSFORMS.register_module()
 class PhotoMetricDistortion3D(PhotoMetricDistortion):
     """Apply photometric distortion to image sequentially, every transformation
     is applied with a probability of 0.5. The position of random contrast is in
@@ -2214,54 +2361,60 @@ class PhotoMetricDistortion3D(PhotoMetricDistortion):
             dict: Result dict with images distorted.
         """
         assert 'img' in results, '`img` is not found in results'
-        img = results['img']
-        img = img.astype(np.float32)
-        if 'photometric_param' not in results:
-            photometric_param = self._random_flags()
-            results['photometric_param'] = photometric_param
+        if isinstance(results["img"], list):
+            imgs = results['img']
         else:
-            photometric_param = results['photometric_param']
+            imgs = [results['img']]
+        
+        for i, img in enumerate(imgs):
+            img = img.astype(np.float32)
+            if 'photometric_param' not in results:
+                photometric_param = self._random_flags()
+                results['photometric_param'] = photometric_param
+            else:
+                photometric_param = results['photometric_param']
 
-        (mode, brightness_flag, contrast_flag, saturation_flag, hue_flag,
-         swap_flag, delta_value, alpha_value, saturation_value, hue_value,
-         swap_value) = photometric_param
+            (mode, brightness_flag, contrast_flag, saturation_flag, hue_flag,
+            swap_flag, delta_value, alpha_value, saturation_value, hue_value,
+            swap_value) = photometric_param
 
-        # random brightness
-        if brightness_flag:
-            img += delta_value
+            # random brightness
+            if brightness_flag:
+                img += delta_value
 
-        # mode == 0 --> do random contrast first
-        # mode == 1 --> do random contrast last
-        if mode == 1:
-            if contrast_flag:
-                img *= alpha_value
+            # mode == 0 --> do random contrast first
+            # mode == 1 --> do random contrast last
+            if mode == 1:
+                if contrast_flag:
+                    img *= alpha_value
 
-        # convert color from BGR to HSV
-        img = mmcv.bgr2hsv(img)
+            # convert color from BGR to HSV
+            img = mmcv.bgr2hsv(img)
 
-        # random saturation
-        if saturation_flag:
-            img[..., 1] *= saturation_value
+            # random saturation
+            if saturation_flag:
+                img[..., 1] *= saturation_value
 
-        # random hue
-        if hue_flag:
-            img[..., 0] += hue_value
-            img[..., 0][img[..., 0] > 360] -= 360
-            img[..., 0][img[..., 0] < 0] += 360
+            # random hue
+            if hue_flag:
+                img[..., 0] += hue_value
+                img[..., 0][img[..., 0] > 360] -= 360
+                img[..., 0][img[..., 0] < 0] += 360
 
-        # convert color from HSV to BGR
-        img = mmcv.hsv2bgr(img)
+            # convert color from HSV to BGR
+            img = mmcv.hsv2bgr(img)
 
-        # random contrast
-        if mode == 0:
-            if contrast_flag:
-                img *= alpha_value
+            # random contrast
+            if mode == 0:
+                if contrast_flag:
+                    img *= alpha_value
 
-        # randomly swap channels
-        if swap_flag:
-            img = img[..., swap_value]
+            # randomly swap channels
+            if swap_flag:
+                img = img[..., swap_value]
 
-        results['img'] = img
+            imgs[i] = np.clip(img, 0, 255).astype(np.float32)
+
         return results
 
 
