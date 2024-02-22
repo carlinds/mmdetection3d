@@ -2,6 +2,7 @@
 import argparse
 import os
 import os.path as osp
+from mmdet3d.utils.misc import replace_ann_file
 
 from mmengine.config import Config, ConfigDict, DictAction
 from mmengine.registry import RUNNERS
@@ -61,6 +62,7 @@ def parse_args():
     # will pass the `--local-rank` parameter to `tools/test.py` instead
     # of `--local_rank`.
     parser.add_argument('--local_rank', '--local-rank', type=int, default=0)
+    parser.add_argument('--ann_file', type=str, help='annotation file')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -105,6 +107,9 @@ def main():
     # TODO: We will unify the ceph support approach with other OpenMMLab repos
     if args.ceph:
         cfg = replace_ceph_backend(cfg)
+
+    if args.ann_file:
+        cfg = replace_ann_file(cfg, args.ann_file)
 
     cfg.launcher = args.launcher
     if args.cfg_options is not None:

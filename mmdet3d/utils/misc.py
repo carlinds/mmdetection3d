@@ -1,5 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 
+def replace_ann_file(cfg, new_ann_file):
+    cfg_pretty_text = cfg.pretty_text
+
+    if 'nuscenes' in cfg_pretty_text:
+        if "val" in new_ann_file:
+            cfg_pretty_text = cfg_pretty_text.replace(
+                'nuscenes_infos_val.pkl', new_ann_file)
+
+    cfg = cfg.fromstring(cfg_pretty_text, file_format='.py')
+    return cfg
+
 
 def replace_ceph_backend(cfg):
     cfg_pretty_text = cfg.pretty_text
