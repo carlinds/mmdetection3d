@@ -182,6 +182,34 @@ class NuScenesMetric(BaseMetric):
         if tmp_dir is not None:
             tmp_dir.cleanup()
         return metric_dict
+    
+    def compute_metrics_from_formatted(self, result_dict: dict) -> Dict[str, float]:
+        """Compute the metrics from processed results.
+
+        Args:
+            results (List[dict]): The processed results of each batch.
+
+        Returns:
+            Dict[str, float]: The computed metrics. The keys are the names of
+            the metrics, and the values are corresponding results.
+        """
+        logger: MMLogger = MMLogger.get_current_instance()
+
+        classes = self.dataset_meta['classes']
+        self.version = self.dataset_meta['version']
+        # load annotations
+        self.data_infos = load(
+            self.ann_file, backend_args=self.backend_args)['data_list']
+
+        metric_dict = {}
+        for metric in self.metrics:
+            ap_dict = self.nus_evaluate(
+                result_dict, classes=classes, metric=metric, logger=logger)
+            for result in ap_dict:
+                metric_dict[result] = ap_dict[result]
+
+        return metric_dict
+
 
     def nus_evaluate(self,
                      result_dict: dict,
