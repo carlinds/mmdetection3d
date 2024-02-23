@@ -4,7 +4,7 @@
 #SBATCH --gpus 1
 #SBATCH --time 03:00:00
 #SBATCH --output /proj/agp/users/%u/logs/%j.out
-#SBATCH -A Berzelius-2023-211
+#SBATCH -A Berzelius-2023-209
 #
 
 NAME=${1:?"No name given"}
