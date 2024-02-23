@@ -37,4 +37,7 @@ RUN conda clean --all \
     && cd /mmdetection3d \
     && pip install --no-cache-dir -e .
 
+# Install wandb
+RUN pip install wandb
+
 WORKDIR /mmdetection3d
