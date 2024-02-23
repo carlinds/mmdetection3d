@@ -3,6 +3,20 @@ _base_ = [
     '../../../configs/_base_/default_runtime.py',
     '../../../configs/_base_/schedules/cyclic-20e.py'
 ]
+
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(
+        type='WandbVisBackend',
+        init_kwargs=dict(
+            project='real2sim',
+            entity='agp',
+        )
+    )
+]
+visualizer = dict(
+    type='Det3DLocalVisualizer', vis_backends=vis_backends, name='visualizer')
+
 backbone_norm_cfg = dict(type='LN', requires_grad=True)
 custom_imports = dict(imports=['projects.PETR.petr'])
 
@@ -209,7 +223,7 @@ test_pipeline = [
 
 train_dataloader = dict(
     batch_size=6,
-    num_workers=16,
+    num_workers=2,
     dataset=dict(
         type=dataset_type,
         data_prefix=dict(
