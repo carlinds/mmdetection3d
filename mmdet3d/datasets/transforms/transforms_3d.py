@@ -2205,18 +2205,14 @@ class GaussianNoise(BaseTransform):
         else:
             imgs = [results['img']]
 
-        if np.random.rand() > self.p:
-            return results
-        
-        imgs = np.array(imgs)
-        noise = np.random.normal(self.mean, self.std, imgs.shape).astype(
+        for i, img in enumerate(imgs):
+            if np.random.rand() > self.p:
+                continue
+            
+            img = img.astype(np.float32)
+            noise = np.random.normal(self.mean, self.std, img.shape).astype(
                 np.float32)
-        imgs = np.clip(imgs + noise, 0, 255).astype(np.float32)
-
-        if isinstance(results["img"], list):
-            results['img'] = list(imgs)
-        else:
-            results['img'] = imgs[0]
+            imgs[i] = np.clip(img + noise, 0, 255).astype(np.float32)
 
         return results
 
@@ -2261,17 +2257,10 @@ class GaussianBlur(BaseTransform):
         else:
             imgs = [results['img']]
 
-        if np.random.rand() > self.p:
-            return results
-        
-        imgs_array = np.array(imgs)
-        n, h, w, c = imgs_array.shape
-        imgs_array = cv2.GaussianBlur(imgs_array.transpose(1, 2, 3, 0).reshape(h, w, -1), (self.kernel_size, self.kernel_size), self.std_x, self.std_y).reshape(h, w, c, n).transpose(3, 0, 1, 2)
-        
-        if isinstance(results["img"], list):
-            results['img'] = list(imgs_array)
-        else:
-            results['img'] = imgs_array[0]
+        for i, img in enumerate(imgs):
+            if np.random.rand() > self.p:
+                continue
+            imgs[i] = cv2.GaussianBlur(img, (self.kernel_size, self.kernel_size), self.std_x, self.std_y)
 
         return results
 
@@ -2314,17 +2303,11 @@ class DownAndUp(BaseTransform):
         else:
             imgs = [results['img']]
 
-        if np.random.rand() > self.p:
-            return results
-
-        imgs_array = np.array(imgs)
-        n, h, w, c = imgs_array.shape
-        imgs_array = imresize(imresize(imgs_array.transpose(1, 2, 3, 0).reshape(h, w, -1),  (w//self.downsampling_factor, h//self.downsampling_factor)), (w, h)).reshape(h, w, c, n).transpose(3, 0, 1, 2)
-
-        if isinstance(results["img"], list):
-            results['img'] = list(imgs_array)
-        else:
-            results['img'] = imgs_array[0]
+        for i, img in enumerate(imgs):
+            if np.random.rand() > self.p:
+                continue
+            h, w, _ = img.shape
+            imgs[i] = imresize(imresize(img, (w//self.downsampling_factor, h//self.downsampling_factor)), (w, h))
 
         return results
 
