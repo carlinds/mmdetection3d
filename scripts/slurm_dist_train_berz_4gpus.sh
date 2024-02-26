@@ -2,7 +2,7 @@
 #
 #SBATCH --nodes 1
 #SBATCH --gpus 4
-#SBATCH --time 02-00:00:00
+#SBATCH --time 01-00:00:00
 #SBATCH --output /proj/agp/users/%u/logs/%j.out
 #SBATCH -A Berzelius-2023-209
 #
@@ -24,6 +24,7 @@ singularity exec --nv \
         ${CONFIG_FILE} \
         4 \
         --work-dir ${OUTPUT_DIR} \
+        --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR} \
         ${@:3}
 
 #

@@ -21,6 +21,7 @@ singularity exec --nv \
     python -u tools/train.py \
         ${CONFIG_FILE} \
         --work-dir ${OUTPUT_DIR} \
+        --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR} \
         ${@:4}
 
 #

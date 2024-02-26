@@ -2,7 +2,7 @@
 #
 #SBATCH --nodes 1
 #SBATCH --gpus 4
-#SBATCH --cpus-per-task 64
+#SBATCH --cpus-per-task 128
 #SBATCH --time 02-00:00:00
 #SBATCH --output /workspaces/%u/logs/mmdet3d/%j.out
 #SBATCH --partition zprod
@@ -25,6 +25,7 @@ singularity exec --nv \
         ${CONFIG_FILE} \
         4 \
         --work-dir ${OUTPUT_DIR} \
+        --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR} \
         ${@:3}
 
 #

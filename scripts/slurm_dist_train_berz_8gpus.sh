@@ -24,6 +24,7 @@ singularity exec --nv \
         ${CONFIG_FILE} \
         8 \
         --work-dir ${OUTPUT_DIR} \
+        --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR} \
         ${@:3}
 
 #
