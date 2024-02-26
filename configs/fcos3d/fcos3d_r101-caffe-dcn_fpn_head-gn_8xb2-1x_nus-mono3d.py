@@ -2,6 +2,20 @@ _base_ = [
     '../_base_/datasets/nus-mono3d.py', '../_base_/models/fcos3d.py',
     '../_base_/schedules/mmdet-schedule-1x.py', '../_base_/default_runtime.py'
 ]
+
+vis_backends = [
+    dict(type='LocalVisBackend'),
+    dict(
+        type='WandbVisBackend',
+        init_kwargs=dict(
+            project='real2sim',
+            entity='agp',
+        )
+    )
+]
+visualizer = dict(
+    type='Det3DLocalVisualizer', vis_backends=vis_backends, name='visualizer')
+
 # model settings
 model = dict(
     data_preprocessor=dict(
