@@ -13,7 +13,7 @@ DATA_ROOT_TRAIN=${3:?"No train data root given"}
 DATA_ROOT_VAL=${4:?"No val data root given"}
 wandb_group=${WANDB_GROUP:-""}
 
-OUTPUT_DIR=outputs/train/${NAME}
+OUTPUT_DIR=outputs/train/${wandb_group}/${NAME}
 
 export PORT=$RANDOM
 export WANDB_NAME=${NAME}
