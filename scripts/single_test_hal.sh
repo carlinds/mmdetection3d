@@ -14,10 +14,11 @@ DATA_ROOT=${4:?"No data root given"}
 ANN_FILE=${5:?"No annotation file given"}
 
 OUTPUT_DIR=outputs/$(basename $DATA_ROOT)_${ANN_FILE%.pkl}_${NAME}
+export WANDB_NAME=test_${NAME}
 
 singularity exec --nv \
     --bind $PWD:/mmdetection3d \
-    --bind $DATA_ROOT:/mmdetection3d/data/nuscenes \
+    --bind $DATA_ROOT:$DATA_ROOT \
     --bind nuscenes_custom_files/splits.py:/opt/conda/lib/python3.7/site-packages/nuscenes/utils/splits.py \
     --bind nuscenes_custom_files/loaders.py:/opt/conda/lib/python3.7/site-packages/nuscenes/eval/common/loaders.py \
     --pwd /mmdetection3d \

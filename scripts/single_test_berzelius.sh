@@ -21,7 +21,7 @@ singularity exec --nv \
     --bind nuscenes_custom_files/splits.py:/opt/conda/lib/python3.7/site-packages/nuscenes/utils/splits.py \
     --bind nuscenes_custom_files/loaders.py:/opt/conda/lib/python3.7/site-packages/nuscenes/eval/common/loaders.py \
     --pwd /mmdetection3d \
-    /proj/agp/containers/mmdet3d_v1.4.0.sif \
+    /proj/agp/containers/mmdet3d_v1.4.0_220224.sif \
     python tools/test.py ${CONFIG_FILE} ${CHECKPOINT_FILE} \
     --ann_file ${ANN_FILE} \
     --work-dir ${OUTPUT_DIR} \
