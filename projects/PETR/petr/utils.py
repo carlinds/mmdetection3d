@@ -20,11 +20,11 @@ def normalize_bbox(bboxes, pc_range):
         vx = bboxes[..., 7:8]
         vy = bboxes[..., 8:9]
         normalized_bboxes = torch.cat(
-            (cx, cy, length, width, cz, height, rot.sin(), rot.cos(), vx, vy),
+            (cx, cy, width, length, cz, height, rot.sin(), rot.cos(), vx, vy),
             dim=-1)
     else:
         normalized_bboxes = torch.cat(
-            (cx, cy, length, width, cz, height, rot.sin(), rot.cos()), dim=-1)
+            (cx, cy, width, length, cz, height, rot.sin(), rot.cos()), dim=-1)
     return normalized_bboxes
 
 
@@ -43,8 +43,8 @@ def denormalize_bbox(normalized_bboxes, pc_range):
     cz = normalized_bboxes[..., 4:5]
 
     # size
-    length = normalized_bboxes[..., 2:3]
-    width = normalized_bboxes[..., 3:4]
+    width = normalized_bboxes[..., 2:3]
+    length = normalized_bboxes[..., 3:4]
     height = normalized_bboxes[..., 5:6]
 
     width = width.exp()
