@@ -17,7 +17,7 @@ OUTPUT_DIR=outputs/$(basename $DATA_ROOT)_${ANN_FILE%.pkl}_${NAME}
 
 singularity exec --nv \
     --bind $PWD:/mmdetection3d \
-    --bind $DATA_ROOT:/mmdetection3d/data/nuscenes \
+    --bind /proj:/proj \
     --bind nuscenes_custom_files/splits.py:/opt/conda/lib/python3.7/site-packages/nuscenes/utils/splits.py \
     --bind nuscenes_custom_files/loaders.py:/opt/conda/lib/python3.7/site-packages/nuscenes/eval/common/loaders.py \
     --pwd /mmdetection3d \
@@ -25,8 +25,14 @@ singularity exec --nv \
     python tools/test.py ${CONFIG_FILE} ${CHECKPOINT_FILE} \
     --ann_file ${ANN_FILE} \
     --work-dir ${OUTPUT_DIR} \
-    --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR}
-    ${@:3}
-
+    --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR} \
+    val_dataloader.dataset.data_root=${DATA_ROOT} \
+    val_dataloader.dataset.ann_file=${ANN_FILE} \
+    test_dataloader.dataset.data_root=${DATA_ROOT} \
+    test_dataloader.dataset.ann_file=${ANN_FILE} \
+    val_evaluator.data_root=${DATA_ROOT} \
+    val_evaluator.ann_file=${DATA_ROOT}/${ANN_FILE} \
+    test_evaluator.data_root=${DATA_ROOT} \
+    test_evaluator.ann_file=${DATA_ROOT}/${ANN_FILE}
 #
 #EOF

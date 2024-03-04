@@ -12,6 +12,7 @@ CONFIG_FILE=${2:?"No config file given"}
 DATA_ROOT_TRAIN=${3:?"No train data root given"}
 DATA_ROOT_VAL=${4:?"No val data root given"}
 wandb_group=${WANDB_GROUP:-""}
+resume_from=${RESUME_FROM:-""}
 
 OUTPUT_DIR=outputs/train/${wandb_group}/${NAME}
 
@@ -21,6 +22,13 @@ export WANDB_RUN_GROUP=${wandb_group}
 
 train_pickle=nuscenes_infos_train.pkl
 eval_pickle=nuscenes_infos_val_clear.pkl
+
+# If resume_from is set, then we should use the resume_from checkpoint
+if [ -z "$resume_from" ]; then
+    resume_from=""
+else
+    resume_from="--resume ${resume_from}"
+fi
 
 singularity exec --nv \
     --bind $PWD:/mmdetection3d \
@@ -32,6 +40,7 @@ singularity exec --nv \
     bash ./tools/dist_train.sh \
         ${CONFIG_FILE} \
         4 \
+        ${resume_from} \
         --work-dir ${OUTPUT_DIR} \
         --cfg-options val_evaluator.jsonfile_prefix=${OUTPUT_DIR} test_evaluator.jsonfile_prefix=${OUTPUT_DIR} \
         train_dataloader.dataset.data_root=${DATA_ROOT_TRAIN} \
