@@ -1,7 +1,11 @@
 _base_ = './fcos3d_r101-caffe-dcn_fpn_head-gn_8xb2-1x_nus-mono3d_finetune_further.py'
 backend_args = None
 train_pipeline = [
-    dict(type='LoadImageFromFileMono3D', backend_args=backend_args),
+    dict(
+        type='LoadImageFromFileMono3DSwitchRoot',
+        backend_args=backend_args,
+        data_root_switch=("/proj/adas-data/data/nuscenes","/proj/agp/renders/real2sim/nusc_pix2pixhd"),
+        data_root_switch_p=1.0),
     dict(
         type='LoadAnnotations3D',
         with_bbox=True,
@@ -10,10 +14,6 @@ train_pipeline = [
         with_bbox_3d=True,
         with_label_3d=True,
         with_bbox_depth=True),
-    dict(type="GaussianNoise", p=0.5, mean=0.0, std=10.0),
-    dict(type="GaussianBlur", p=0.5, kernel_size=15),
-    dict(type="PhotoMetricDistortion3D"),
-    dict(type="DownAndUp", p=0.5, downsampling_factor=10),
     dict(type='mmdet.Resize', scale=(1600, 900), keep_ratio=True),
     dict(type='RandomFlip3D', flip_ratio_bev_horizontal=0.5),
     dict(
