@@ -496,6 +496,86 @@ class LoadImageFromFileMono3D(LoadImageFromFile):
 
         return results
 
+@TRANSFORMS.register_module()
+class LoadImageFromFileMono3DSwitchRoot(LoadImageFromFile):
+    """Load an image from file in monocular 3D object detection. Compared to 2D
+    detection, additional camera parameters need to be loaded.
+
+    Args:
+        kwargs (dict): Arguments are the same as those in
+            :class:`LoadImageFromFile`.
+    """
+    def __init__(self,
+                 to_float32: bool = False,
+                 color_type: str = 'color',
+                 imdecode_backend: str = 'cv2',
+                 file_client_args: Optional[dict] = None,
+                 ignore_empty: bool = False,
+                 *,
+                 backend_args: Optional[dict] = None,
+                 data_root_switch: Tuple[str, str]=("", ""),
+                 data_root_switch_p: float=0.5) -> None:
+        super().__init__(
+            to_float32=to_float32,
+            color_type=color_type,
+            imdecode_backend=imdecode_backend,
+            file_client_args=file_client_args,
+            ignore_empty=ignore_empty,
+            backend_args=backend_args,
+        )
+        self.data_root_switch = data_root_switch
+        self.data_root_switch_p = data_root_switch_p
+
+
+    def transform(self, results: dict) -> dict:
+        """Call functions to load image and get image meta information.
+
+        Args:
+            results (dict): Result dict from :obj:`mmdet.CustomDataset`.
+
+        Returns:
+            dict: The dict contains loaded image and meta information.
+        """
+        # TODO: load different camera image from data info,
+        # for kitti dataset, we load 'CAM2' image.
+        # for nuscenes dataset, we load 'CAM_FRONT' image.
+
+        if 'CAM2' in results['images']:
+            filename = results['images']['CAM2']['img_path']
+            results['cam2img'] = results['images']['CAM2']['cam2img']
+        elif len(list(results['images'].keys())) == 1:
+            camera_type = list(results['images'].keys())[0]
+            filename = results['images'][camera_type]['img_path']
+            results['cam2img'] = results['images'][camera_type]['cam2img']
+        else:
+            raise NotImplementedError(
+                'Currently we only support load image from kitti and '
+                'nuscenes datasets')
+
+        
+        if np.random.rand() < self.data_root_switch_p:
+            new_filename = filename.replace(self.data_root_switch[0], self.data_root_switch[1])
+            if os.path.exists(new_filename):
+                filename = new_filename
+
+        try:
+            img_bytes = get(filename, backend_args=self.backend_args)
+            img = mmcv.imfrombytes(
+                img_bytes, flag=self.color_type, backend=self.imdecode_backend)
+        except Exception as e:
+            if self.ignore_empty:
+                return None
+            else:
+                raise e
+        if self.to_float32:
+            img = img.astype(np.float32)
+
+        results['img'] = img
+        results['img_shape'] = img.shape[:2]
+        results['ori_shape'] = img.shape[:2]
+
+        return results
+
 
 @TRANSFORMS.register_module()
 class LoadImageFromNDArray(LoadImageFromFile):

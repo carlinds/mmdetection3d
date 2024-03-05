@@ -2,7 +2,7 @@
 from .dbsampler import DataBaseSampler
 from .formating import Pack3DDetInputs
 from .loading import (LidarDet3DInferencerLoader, LoadAnnotations3D,
-                      LoadImageFromFileMono3D, LoadMultiViewImageFromFiles,
+                      LoadImageFromFileMono3D, LoadImageFromFileMono3DSwitchRoot, LoadMultiViewImageFromFiles,
                       LoadPointsFromDict, LoadPointsFromFile,
                       LoadPointsFromMultiSweeps, MonoDet3DInferencerLoader,
                       MultiModalityDet3DInferencerLoader, NormalizePointsColor,
@@ -27,7 +27,7 @@ __all__ = [
     'IndoorPointSample', 'PointSample', 'PointSegClassMapping',
     'MultiScaleFlipAug3D', 'LoadPointsFromMultiSweeps',
     'BackgroundPointsFilter', 'VoxelBasedPointSampler', 'GlobalAlignment',
-    'IndoorPatchPointSample', 'LoadImageFromFileMono3D', 'ObjectNameFilter',
+    'IndoorPatchPointSample', 'LoadImageFromFileMono3D', 'LoadImageFromFileMono3DSwitchRoot', 'ObjectNameFilter',
     'RandomDropPointsColor', 'RandomJitterPoints', 'AffineResize',
     'RandomShiftScale', 'LoadPointsFromDict', 'Resize3D', 'RandomResize3D',
     'MultiViewWrapper', 'PhotoMetricDistortion3D', 'MonoDet3DInferencerLoader',
