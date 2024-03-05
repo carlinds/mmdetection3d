@@ -12,8 +12,12 @@ CONFIG_FILE=${2:?"No config file given"}
 CHECKPOINT_FILE=${3:?"No checkpoint file given"}
 DATA_ROOT=${4:?"No data root given"}
 ANN_FILE=${5:?"No annotation file given"}
+wandb_group=${WANDB_GROUP:-""}
 
-OUTPUT_DIR=outputs/$(basename $DATA_ROOT)_${ANN_FILE%.pkl}_${NAME}
+export WANDB_NAME=${NAME}
+export WANDB_RUN_GROUP=${wandb_group}
+
+OUTPUT_DIR=outputs/test/$(basename $DATA_ROOT)_${ANN_FILE%.pkl}_${NAME}
 
 singularity exec --nv \
     --bind $PWD:/mmdetection3d \
