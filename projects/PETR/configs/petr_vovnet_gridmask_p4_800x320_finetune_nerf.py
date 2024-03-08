@@ -16,9 +16,13 @@ ida_aug_conf = {
 backend_args = None
 train_pipeline = [
     dict(
-        type='LoadMultiViewImageFromFiles',
+        type='LoadMultiViewImageFromFilesSwitchRoot',
         to_float32=True,
-        backend_args=backend_args),
+        backend_args=backend_args,
+        data_root_switch=('/proj/adas-data/data/nuscenes',
+                          '/proj/agp/renders/real2sim/' +
+                          'nusc_train_subset-neurader_no_keyframes_fullres'),
+        data_root_switch_p=1.0),
     dict(
         type='LoadAnnotations3D',
         with_bbox_3d=True,
@@ -26,10 +30,6 @@ train_pipeline = [
         with_attr_label=False),
     dict(type='ObjectRangeFilter', point_cloud_range=point_cloud_range),
     dict(type='ObjectNameFilter', classes=class_names),
-    dict(type='GaussianNoise', p=0.5, mean=0.0, std=10.0),
-    dict(type='GaussianBlur', p=0.5, kernel_size=15),
-    dict(type='PhotoMetricDistortion3D'),
-    dict(type='DownAndUp', p=0.5, downsampling_factor=10),
     dict(
         type='ResizeCropFlipImage', data_aug_conf=ida_aug_conf, training=True),
     dict(
