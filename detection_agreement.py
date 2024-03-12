@@ -14,6 +14,8 @@ from nuscenes.eval.detection.constants import TP_METRICS
 from nuscenes.eval.detection.data_classes import (DetectionBox,
                                                   DetectionMetricDataList,
                                                   DetectionMetrics)
+from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
 parser = argparse.ArgumentParser(
     description='Compute detection agreement between two sets of predictions')
@@ -36,6 +38,11 @@ parser.add_argument(
     type=str,
     default='tmp',
     help='Output directory for the results')
+parser.add_argument(
+    '--max_workers',
+    type=int,
+    default=16,
+    help='Number of workers to use for parallel processing')
 
 
 class DetectionEval:
@@ -191,12 +198,16 @@ def compute_agreement(results_a, results_b, nusc):
 
 
 def main(**kwargs):
+    print("Opening results files...")
     with open(kwargs['results_a'], 'rb') as f_a, open(kwargs['results_b'],
                                                       'rb') as f_b:
         results_a = json.load(f_a)
         results_a = results_a['results']
+        print("Loaded results A")
+
         results_b = json.load(f_b)
         results_b = results_b['results']
+        print("Loaded results B")
 
     data_root = kwargs['data_root']
     nusc_version = kwargs['nusc_version']
@@ -213,14 +224,29 @@ def main(**kwargs):
         results_b), 'Results files do not have the same number of samples.'
     samples = list(results_a.keys())
 
+    print("Loading NuScenes...")
     nusc = NuScenes(version=nusc_version, dataroot=data_root, verbose=False)
     agreement_results = {}
-    for sample in samples:
-        agreement_results[sample] = compute_agreement(
-            {sample: results_a[sample]}, {sample: results_b[sample]}, nusc)
+    # loop over samples with tqdm
+
+    print("Computing agreement...")
+    results = []
+    with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+        for sample in tqdm(samples[:100]):
+            res = executor.submit(compute_agreement, {sample: results_a[sample]}, {sample: results_b[sample]}, nusc)
+            results.append(res)
+
+    agreement_results = [res.result() for res in results]
+    agreement_results = {samples[i]: agreement_results[i] for i in range(len(samples[:100]))}
+    
 
     with open(os.path.join(output_dir, 'agreement_results.json'), 'w') as f:
         json.dump(agreement_results, f)
+
+    mean_map = np.mean([res['symmetric_map'] for res in agreement_results.values()])
+    mean_nds = np.mean([res['symmetric_nds'] for res in agreement_results.values()])
+    print(f'Mean symmetric mAP: {mean_map:.4f}')
+    print(f'Mean symmetric NDS: {mean_nds:.4f}')
 
 
 if __name__ == '__main__':
