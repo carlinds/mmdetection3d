@@ -232,12 +232,12 @@ def main(**kwargs):
     print("Computing agreement...")
     results = []
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        for sample in tqdm(samples[:100]):
+        for sample in tqdm(samples):
             res = executor.submit(compute_agreement, {sample: results_a[sample]}, {sample: results_b[sample]}, nusc)
             results.append(res)
 
     agreement_results = [res.result() for res in results]
-    agreement_results = {samples[i]: agreement_results[i] for i in range(len(samples[:100]))}
+    agreement_results = {samples[i]: agreement_results[i] for i in range(len(samples))}
     
 
     with open(os.path.join(output_dir, 'agreement_results.json'), 'w') as f:
