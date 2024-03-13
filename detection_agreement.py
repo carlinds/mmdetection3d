@@ -105,12 +105,14 @@ class DetectionEval:
         # Filter boxes (distance, points per box, etc.).
         if verbose:
             print("Filtering predictions")
-        self.pred_boxes_a = filter_eval_boxes(
-            nusc, self.pred_boxes_a, self.cfg.class_range, verbose=verbose
-        )
-        self.pred_boxes_b = filter_eval_boxes(
-            nusc, self.pred_boxes_b, self.cfg.class_range, verbose=verbose
-        )
+        if len(self.pred_boxes_a):
+            self.pred_boxes_a = filter_eval_boxes(
+                nusc, self.pred_boxes_a, self.cfg.class_range, verbose=verbose
+            )
+        if len(self.pred_boxes_b):
+            self.pred_boxes_b = filter_eval_boxes(
+                nusc, self.pred_boxes_b, self.cfg.class_range, verbose=verbose
+            )
 
         self.sample_tokens = self.pred_boxes_a.sample_tokens
 
@@ -219,22 +221,12 @@ def compute_agreement(
         thresholded_results_a[sample_token] = [
             box for box in boxes if box["detection_score"] > results_a_conf_threshold
         ]
-        if len(thresholded_results_a[sample_token]) == 0:
-            # add most confident box
-            thresholded_results_a[sample_token] = [
-                max(boxes, key=lambda x: x["detection_score"])
-            ]
 
     thresholded_results_b = {}
     for sample_token, boxes in results_b.items():
         thresholded_results_b[sample_token] = [
             box for box in boxes if box["detection_score"] > results_b_conf_threshold
         ]
-        if len(thresholded_results_b[sample_token]) == 0:
-            # add most confident box
-            thresholded_results_b[sample_token] = [
-                max(boxes, key=lambda x: x["detection_score"])
-            ]
 
     detection_eval = DetectionEval(
         nusc, thresholded_results_a, results_b, verbose=verbose
