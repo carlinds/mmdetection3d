@@ -17,6 +17,7 @@ from nuscenes.eval.detection.data_classes import (
     DetectionMetricDataList,
     DetectionMetrics,
 )
+from nuscenes.eval.detection.render import visualize_sample
 from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
@@ -148,6 +149,7 @@ class DetectionEval:
         if self.verbose:
             print("Accumulating metric data...")
         metric_data_list = DetectionMetricDataList()
+        valids = {}
         for class_name in self.cfg.class_names:
             for dist_th in self.cfg.dist_ths:
                 md = accumulate(
@@ -158,6 +160,7 @@ class DetectionEval:
                     dist_th,
                 )
                 metric_data_list.set(class_name, dist_th, md)
+                valids[(class_name, dist_th)] = len([1 for gt_box in self.pred_boxes_a.all if gt_box.detection_name == class_name]) > 0
 
         # -----------------------------------
         # Step 2: Calculate metrics from the data.
@@ -168,12 +171,16 @@ class DetectionEval:
         for class_name in self.cfg.class_names:
             # Compute APs.
             for dist_th in self.cfg.dist_ths:
+                if not valids[(class_name, dist_th)]:
+                    continue
                 metric_data = metric_data_list[(class_name, dist_th)]
                 ap = calc_ap(metric_data, self.cfg.min_recall, self.cfg.min_precision)
                 metrics.add_label_ap(class_name, dist_th, ap)
 
             # Compute TP metrics.
             for metric_name in TP_METRICS:
+                if not valids[(class_name, self.cfg.dist_th_tp)]:
+                    continue
                 metric_data = metric_data_list[(class_name, self.cfg.dist_th_tp)]
                 if class_name in ["traffic_cone"] and metric_name in [
                     "attr_err",
@@ -203,6 +210,7 @@ def compute_agreement(
     results_a_conf_threshold=0.5,
     results_b_conf_threshold=0.5,
     verbose=False,
+    vis=False,
 ):
     agreement_metrics = {}
     # Compute detection metrics with a as ground truth and b as predictions.
@@ -234,6 +242,9 @@ def compute_agreement(
     a_b_metric_summary, _ = detection_eval.evaluate()
     a_b_metric_summary = a_b_metric_summary.serialize()
     agreement_metrics["a_b_results"] = a_b_metric_summary
+    if vis:
+        visualize_sample(detection_eval.nusc, detection_eval.sample_tokens[0], detection_eval.pred_boxes_a, detection_eval.pred_boxes_b, savepath=f"vis/{detection_eval.sample_tokens[0]}_real_vs_sim.png")
+
 
     # Compute detection metrics with b as ground truth and a as predictions.
     detection_eval = DetectionEval(
@@ -242,6 +253,8 @@ def compute_agreement(
     b_a_metric_summary, _ = detection_eval.evaluate()
     b_a_metric_summary = b_a_metric_summary.serialize()
     agreement_metrics["b_a_results"] = b_a_metric_summary
+    if vis:
+        visualize_sample(detection_eval.nusc, detection_eval.sample_tokens[0], detection_eval.pred_boxes_a, detection_eval.pred_boxes_b, savepath=f"vis/{detection_eval.sample_tokens[0]}_sim_vs_real.png")
 
     # Compute symmetric agreement metrics.
     agreement_metrics["symmetric_map"] = (
