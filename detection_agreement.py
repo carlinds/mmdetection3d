@@ -39,6 +39,12 @@ parser.add_argument(
     default='tmp',
     help='Output directory for the results')
 parser.add_argument(
+    "--output_file",
+    type=str,
+    default="agreement_results.json",
+    help="Name of the output file"
+)
+parser.add_argument(
     '--max_workers',
     type=int,
     default=16,
@@ -175,16 +181,23 @@ class DetectionEval:
         return metrics, metric_data_list
 
 
-def compute_agreement(results_a, results_b, nusc):
+def compute_agreement(results_a, results_b, nusc,results_a_conf_threshold=0.5, results_b_conf_threshold=0.5, verbose=False):
     agreement_metrics = {}
     # Compute detection metrics with a as ground truth and b as predictions.
-    detection_eval = DetectionEval(nusc, results_a, results_b)
+    thresholded_results_a = {}
+    for sample_token, boxes in results_a.items():
+        thresholded_results_a[sample_token] = [box for box in boxes if box['detection_score'] > results_a_conf_threshold]
+    thresholded_results_b = {}
+    for sample_token, boxes in results_b.items():
+        thresholded_results_b[sample_token] = [box for box in boxes if box['detection_score'] > results_b_conf_threshold]
+
+    detection_eval = DetectionEval(nusc, thresholded_results_a, results_b, verbose=verbose)
     a_b_metric_summary, _ = detection_eval.evaluate()
     a_b_metric_summary = a_b_metric_summary.serialize()
     agreement_metrics['a_b_results'] = a_b_metric_summary
 
     # Compute detection metrics with b as ground truth and a as predictions.
-    detection_eval = DetectionEval(nusc, results_b, results_a)
+    detection_eval = DetectionEval(nusc, thresholded_results_b, results_a, verbose=verbose)
     b_a_metric_summary, _ = detection_eval.evaluate()
     b_a_metric_summary = b_a_metric_summary.serialize()
     agreement_metrics['b_a_results'] = b_a_metric_summary
@@ -195,7 +208,6 @@ def compute_agreement(results_a, results_b, nusc):
     agreement_metrics['symmetric_nds'] = (a_b_metric_summary['nd_score'] +
                                           b_a_metric_summary['nd_score']) / 2
     return agreement_metrics
-
 
 def main(**kwargs):
     print("Opening results files...")
@@ -231,12 +243,15 @@ def main(**kwargs):
 
     print("Computing agreement...")
     results = []
+    agreement_results = []
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        for sample in tqdm(samples):
+        for sample in samples:
             res = executor.submit(compute_agreement, {sample: results_a[sample]}, {sample: results_b[sample]}, nusc)
             results.append(res)
 
-    agreement_results = [res.result() for res in results]
+        for res in tqdm(results):
+            agreement_results.append(res.result())
+    
     agreement_results = {samples[i]: agreement_results[i] for i in range(len(samples))}
     
 
