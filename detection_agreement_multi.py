@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 import json
 import os
 
@@ -41,9 +42,14 @@ parser.add_argument(
     default=16,
     help="Number of workers to use for parallel processing",
 )
+parser.add_argument(
+    "--aggregate_per_scene", action="store_true", help="Aggregate results per scene"
+)
 
 
-def run_compute_agreement(result_a_fp, result_b_fp, output_fp, nusc):
+def run_compute_agreement(
+    result_a_fp, result_b_fp, output_fp, nusc, aggregate_per_scene
+):
     with open(result_a_fp, "rb") as f_a, open(result_b_fp, "rb") as f_b:
         results_a = json.load(f_a)
         results_a = results_a["results"]
@@ -59,31 +65,43 @@ def run_compute_agreement(result_a_fp, result_b_fp, output_fp, nusc):
     samples = list(results_a.keys())
     agreement_results = {}
 
+    scene_to_samples = defaultdict(dict)
+    for sample in samples:
+        scene_token = (
+            nusc.get("sample", sample)["scene_token"] if aggregate_per_scene else sample
+        )
+        if scene_token not in scene_to_samples:
+            scene_to_samples[scene_token]["results_a"] = {}
+            scene_to_samples[scene_token]["results_b"] = {}
+
+        scene_to_samples[scene_token]["results_a"][sample] = results_a[sample]
+        scene_to_samples[scene_token]["results_b"][sample] = results_b[sample]
+
+    scene_tokens = list(scene_to_samples.keys())
+
     print("Computing agreement...")
-    results = []
-    agreement_results = []
+    futures = []
+
+    agreement_results = dict()
     with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
-        for sample in samples:
-            res = executor.submit(
-                compute_agreement,
-                {sample: results_a[sample]},
-                {sample: results_b[sample]},
-                nusc,
+        for scene_token in scene_tokens:
+            futures.append(
+                executor.submit(
+                    compute_agreement,
+                    scene_to_samples[scene_token]["results_a"],
+                    scene_to_samples[scene_token]["results_b"],
+                    nusc,
+                )
             )
-            results.append(res)
 
-        for res in tqdm(results):
-            agreement_results.append(res.result())
+        for i, res in enumerate(tqdm(futures)):
+            agreement_results[scene_tokens[i]] = res.result()
 
-    agreement_results = {samples[i]: agreement_results[i] for i in range(len(samples))}
-
+    if aggregate_per_scene:
+        output_fp = output_fp.replace(".json", "_per_scene.json")
     with open(output_fp, "w") as f:
         json.dump(agreement_results, f)
-
-    mean_map = np.mean([res["symmetric_map"] for res in agreement_results.values()])
-    mean_nds = np.mean([res["symmetric_nds"] for res in agreement_results.values()])
-    print(f"Mean symmetric mAP: {mean_map:.4f}")
-    print(f"Mean symmetric NDS: {mean_nds:.4f}")
+    print("Saved results to {}".format(output_fp))
 
 
 def main(**kwargs):
@@ -113,9 +131,13 @@ def main(**kwargs):
     print("Loading NuScenes...")
     nusc = NuScenes(version=nusc_version, dataroot=data_root, verbose=False)
 
-    for result_a_fp, result_b_fp, output_filename in zip(result_a_filepaths, result_b_filepaths, output_filepaths):
+    for result_a_fp, result_b_fp, output_filename in zip(
+        result_a_filepaths, result_b_filepaths, output_filepaths
+    ):
         output_fp = os.path.join(output_dir, output_filename)
-        run_compute_agreement(result_a_fp, result_b_fp, output_fp, nusc)
+        run_compute_agreement(
+            result_a_fp, result_b_fp, output_fp, nusc, kwargs["aggregate_per_scene"]
+        )
 
 
 if __name__ == "__main__":
