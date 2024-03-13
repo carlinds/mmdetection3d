@@ -187,9 +187,16 @@ def compute_agreement(results_a, results_b, nusc,results_a_conf_threshold=0.5, r
     thresholded_results_a = {}
     for sample_token, boxes in results_a.items():
         thresholded_results_a[sample_token] = [box for box in boxes if box['detection_score'] > results_a_conf_threshold]
+        if len(thresholded_results_a[sample_token]) == 0:
+            # add most confident box
+            thresholded_results_a[sample_token] = [max(boxes, key=lambda x: x['detection_score'])]
+
     thresholded_results_b = {}
     for sample_token, boxes in results_b.items():
         thresholded_results_b[sample_token] = [box for box in boxes if box['detection_score'] > results_b_conf_threshold]
+        if len(thresholded_results_b[sample_token]) == 0:
+            # add most confident box
+            thresholded_results_b[sample_token] = [max(boxes, key=lambda x: x['detection_score'])]
 
     detection_eval = DetectionEval(nusc, thresholded_results_a, results_b, verbose=verbose)
     a_b_metric_summary, _ = detection_eval.evaluate()
