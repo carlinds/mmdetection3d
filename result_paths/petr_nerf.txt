@@ -1,0 +1,4 @@
+outputs/test/nusc_val_subset-neurader_no_keyframes_fullres_nuscenes_infos_val_clear_petr_crazy_person_fix_nerfdata_subset/pred_instances_3d/results_nusc.json
+outputs/train/petr_ft_augs_eval_sim/optim_wrapper.optimizer.lr_2e-5/pred_instances_3d/results_nusc.json
+outputs/train/petr_ft_nerf_eval_sim/optim_wrapper.optimizer.lr_2e-5/pred_instances_3d/results_nusc.json
+outputs/train/petr_ft_pix2pix_eval_sim/optim_wrapper.optimizer.lr_2e-5/pred_instances_3d/results_nusc.json

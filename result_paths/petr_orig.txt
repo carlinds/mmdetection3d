@@ -1,0 +1,4 @@
+outputs/train/petr_ft_eval_real/optim_wrapper.optimizer.lr_1e-8/pred_instances_3d/results_nusc.json
+outputs/test/nuscenes_nuscenes_infos_val_clear_ft_algo_eval_real/pred_instances_3d/results_nusc.json
+outputs/test/nuscenes_nuscenes_infos_val_clear_ft_nerf_eval_real/pred_instances_3d/results_nusc.json
+outputs/test/nuscenes_nuscenes_infos_val_clear_ft_pix2pix_eval_real/pred_instances_3d/results_nusc.json
