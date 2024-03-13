@@ -105,11 +105,11 @@ class DetectionEval:
         # Filter boxes (distance, points per box, etc.).
         if verbose:
             print("Filtering predictions")
-        if len(self.pred_boxes_a):
+        if len(self.pred_boxes_a.all):
             self.pred_boxes_a = filter_eval_boxes(
                 nusc, self.pred_boxes_a, self.cfg.class_range, verbose=verbose
             )
-        if len(self.pred_boxes_b):
+        if len(self.pred_boxes_b.all):
             self.pred_boxes_b = filter_eval_boxes(
                 nusc, self.pred_boxes_b, self.cfg.class_range, verbose=verbose
             )
