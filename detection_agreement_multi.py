@@ -45,10 +45,22 @@ parser.add_argument(
 parser.add_argument(
     "--aggregate_per_scene", action="store_true", help="Aggregate results per scene"
 )
+parser.add_argument(
+    "--nusc2nerf_transformations",
+    type=str,
+    default="",
+    help="Path to the file with the nuscenes to nerf transformations",
+)
+parser.add_argument(
+    "--shift",
+    nargs="+", type=float,
+    default=[0, 0, 0],
+    help="Shift that was applied to the nerf ego poses. Will be applied to detections of the second set of results",
+)
 
 
 def run_compute_agreement(
-    result_a_fp, result_b_fp, output_fp, nusc, aggregate_per_scene
+    result_a_fp, result_b_fp, output_fp, nusc, aggregate_per_scene, nusc2nerf_transformations, shift
 ):
     with open(result_a_fp, "rb") as f_a, open(result_b_fp, "rb") as f_b:
         results_a = json.load(f_a)
@@ -67,6 +79,12 @@ def run_compute_agreement(
 
     scene_to_samples = defaultdict(dict)
     for sample in samples:
+        scene_name = nusc.get("scene", nusc.get("sample", sample)["scene_token"])[
+            "name"
+        ]
+        nusc2nerf = np.array(nusc2nerf_transformations[scene_name.split("-")[1]])
+        shift_in_nerf = np.array(shift)
+        shift_in_nuscenes = nusc2nerf[:3, :3].T @ shift_in_nerf.reshape(-1, 1)
         scene_token = (
             nusc.get("sample", sample)["scene_token"] if aggregate_per_scene else sample
         )
@@ -76,6 +94,9 @@ def run_compute_agreement(
 
         scene_to_samples[scene_token]["results_a"][sample] = results_a[sample]
         scene_to_samples[scene_token]["results_b"][sample] = results_b[sample]
+        scene_to_samples[scene_token]["shift"] = tuple(
+            shift_in_nuscenes.flatten().tolist()
+        )
 
     scene_tokens = list(scene_to_samples.keys())
 
@@ -91,6 +112,7 @@ def run_compute_agreement(
                     scene_to_samples[scene_token]["results_a"],
                     scene_to_samples[scene_token]["results_b"],
                     nusc,
+                    scene_to_samples[scene_token]["shift"],
                 )
             )
 
@@ -131,12 +153,19 @@ def main(**kwargs):
     print("Loading NuScenes...")
     nusc = NuScenes(version=nusc_version, dataroot=data_root, verbose=False)
 
+    if len(kwargs["nusc2nerf_transformations"]):
+        print("Loading transformations...")
+        with open(kwargs["nusc2nerf_transformations"], "r") as f:
+            nusc2nerf_transformations = json.load(f)
+    else:
+        nusc2nerf_transformations = defaultdict(lambda: np.eye(4))
+
     for result_a_fp, result_b_fp, output_filename in zip(
         result_a_filepaths, result_b_filepaths, output_filepaths
     ):
         output_fp = os.path.join(output_dir, output_filename)
         run_compute_agreement(
-            result_a_fp, result_b_fp, output_fp, nusc, kwargs["aggregate_per_scene"]
+            result_a_fp, result_b_fp, output_fp, nusc, kwargs["aggregate_per_scene"], nusc2nerf_transformations, kwargs["shift"]
         )
 
 

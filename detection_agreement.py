@@ -53,6 +53,19 @@ parser.add_argument(
 parser.add_argument(
     "--aggregate_per_scene", action="store_true", help="Aggregate results per scene"
 )
+parser.add_argument(
+    "--nusc2nerf_transformations",
+    type=str,
+    default="",
+    help="Path to the file with the nuscenes to nerf transformations",
+)
+parser.add_argument(
+    "--shift",
+    nargs="+", 
+    type=float,
+    default=[0, 0, 0],
+    help="Shift that was applied to the nerf ego poses. Will be applied to detections of the second set of results",
+)
 
 
 class DetectionEval:
@@ -162,7 +175,16 @@ class DetectionEval:
                     dist_th,
                 )
                 metric_data_list.set(class_name, dist_th, md)
-                valids[(class_name, dist_th)] = len([1 for gt_box in self.pred_boxes_a.all if gt_box.detection_name == class_name]) > 0
+                valids[(class_name, dist_th)] = (
+                    len(
+                        [
+                            1
+                            for gt_box in self.pred_boxes_a.all
+                            if gt_box.detection_name == class_name
+                        ]
+                    )
+                    > 0
+                )
 
         # -----------------------------------
         # Step 2: Calculate metrics from the data.
@@ -209,6 +231,11 @@ def compute_agreement(
     results_a,
     results_b,
     nusc,
+    shift=(
+        0,
+        0,
+        0,
+    ),
     results_a_conf_threshold=0.5,
     results_b_conf_threshold=0.5,
     verbose=False,
@@ -224,9 +251,13 @@ def compute_agreement(
 
     thresholded_results_b = {}
     for sample_token, boxes in results_b.items():
-        thresholded_results_b[sample_token] = [
+        for box in boxes:
+            box["translation"] = [t + s for t, s in zip(box["translation"], shift)]
+        results_b[sample_token] = boxes
+        thresholded_boxes = [
             box for box in boxes if box["detection_score"] > results_b_conf_threshold
         ]
+        thresholded_results_b[sample_token] = thresholded_boxes
 
     detection_eval = DetectionEval(
         nusc, thresholded_results_a, results_b, verbose=verbose
@@ -235,8 +266,13 @@ def compute_agreement(
     a_b_metric_summary = a_b_metric_summary.serialize()
     agreement_metrics["a_b_results"] = a_b_metric_summary
     if vis:
-        visualize_sample(detection_eval.nusc, detection_eval.sample_tokens[0], detection_eval.pred_boxes_a, detection_eval.pred_boxes_b, savepath=f"vis/{detection_eval.sample_tokens[0]}_real_vs_sim.png")
-
+        visualize_sample(
+            detection_eval.nusc,
+            detection_eval.sample_tokens[0],
+            detection_eval.pred_boxes_a,
+            detection_eval.pred_boxes_b,
+            savepath=f"vis/{detection_eval.sample_tokens[0]}_real_vs_sim.png",
+        )
 
     # Compute detection metrics with b as ground truth and a as predictions.
     detection_eval = DetectionEval(
@@ -246,7 +282,13 @@ def compute_agreement(
     b_a_metric_summary = b_a_metric_summary.serialize()
     agreement_metrics["b_a_results"] = b_a_metric_summary
     if vis:
-        visualize_sample(detection_eval.nusc, detection_eval.sample_tokens[0], detection_eval.pred_boxes_a, detection_eval.pred_boxes_b, savepath=f"vis/{detection_eval.sample_tokens[0]}_sim_vs_real.png")
+        visualize_sample(
+            detection_eval.nusc,
+            detection_eval.sample_tokens[0],
+            detection_eval.pred_boxes_a,
+            detection_eval.pred_boxes_b,
+            savepath=f"vis/{detection_eval.sample_tokens[0]}_sim_vs_real.png",
+        )
 
     # Compute symmetric agreement metrics.
     agreement_metrics["symmetric_map"] = (
@@ -292,8 +334,21 @@ def main(**kwargs):
     print("Loading NuScenes...")
     nusc = NuScenes(version=nusc_version, dataroot=data_root, verbose=False)
 
+    if len(kwargs["nusc2nerf_transformations"]):
+        print("Loading transformations...")
+        with open(kwargs["nusc2nerf_transformations"], "r") as f:
+            nusc2nerf_transformations = json.load(f)
+    else:
+        nusc2nerf_transformations = defaultdict(lambda: np.eye(4))
+
     scene_to_samples = defaultdict(dict)
     for sample in samples:
+        scene_name = nusc.get("scene", nusc.get("sample", sample)["scene_token"])[
+            "name"
+        ]
+        nusc2nerf = np.array(nusc2nerf_transformations[scene_name.split("-")[1]])
+        shift_in_nerf = np.array(kwargs["shift"])
+        shift_in_nuscenes = nusc2nerf[:3, :3].T @ shift_in_nerf.reshape(-1, 1)
         scene_token = (
             nusc.get("sample", sample)["scene_token"]
             if kwargs["aggregate_per_scene"]
@@ -305,6 +360,9 @@ def main(**kwargs):
 
         scene_to_samples[scene_token]["results_a"][sample] = results_a[sample]
         scene_to_samples[scene_token]["results_b"][sample] = results_b[sample]
+        scene_to_samples[scene_token]["shift"] = tuple(
+            shift_in_nuscenes.flatten().tolist()
+        )
 
     scene_tokens = list(scene_to_samples.keys())
 
@@ -319,6 +377,7 @@ def main(**kwargs):
                     scene_to_samples[scene_token]["results_a"],
                     scene_to_samples[scene_token]["results_b"],
                     nusc,
+                    scene_to_samples[scene_token]["shift"],
                 )
             )
 
