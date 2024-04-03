@@ -1,0 +1,5 @@
+fcos3d_detection_agreement_ft_pix2pix_shifted_-2.json
+fcos3d_detection_agreement_ft_pix2pix_shifted_-1.json
+fcos3d_detection_agreement_ft_pix2pix_shifted_0.json
+fcos3d_detection_agreement_ft_pix2pix_shifted_1.json
+fcos3d_detection_agreement_ft_pix2pix_shifted_2.json
