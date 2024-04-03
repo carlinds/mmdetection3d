@@ -1,0 +1,6 @@
+config=projects/PETR/configs/petr_vovnet_gridmask_p4_800x320_finetune_nerf.py
+data_root=/proj/adas-data/data/nuscenes
+WANDB_GROUP=test_petr sbatch scripts/single_test_berzelius.sh petr_nerf_p01_eval_real_data $config outputs/train/petr_ft_nerf_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.1/epoch_12.pth $data_root nuscenes_infos_val_clear.pkl
+WANDB_GROUP=test_petr sbatch scripts/single_test_berzelius.sh petr_nerf_p03_eval_real_data $config outputs/train/petr_ft_nerf_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.3/epoch_12.pth $data_root nuscenes_infos_val_clear.pkl
+WANDB_GROUP=test_petr sbatch scripts/single_test_berzelius.sh petr_nerf_p05_eval_real_data $config outputs/train/petr_ft_nerf_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.5/epoch_12.pth $data_root nuscenes_infos_val_clear.pkl
+WANDB_GROUP=test_petr sbatch scripts/single_test_berzelius.sh petr_nerf_p07_eval_real_data $config outputs/train/petr_ft_nerf_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.7/epoch_12.pth $data_root nuscenes_infos_val_clear.pkl

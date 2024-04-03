@@ -1,0 +1,6 @@
+config=configs/fcos3d/fcos3d_r101-caffe-dcn_fpn_head-gn_8xb2-1x_nus-mono3d_finetune_further_pix2pix.py
+data_root=/proj/adas-data/data/nuscenes
+WANDB_GROUP=test_fcos sbatch scripts/single_test_berzelius.sh fcos_pix2pix_p01_eval_real_data $config outputs/train/fcos3d_ft_pix2pix_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.1/epoch_6.pth $data_root nuscenes_infos_val_clear.pkl
+WANDB_GROUP=test_fcos sbatch scripts/single_test_berzelius.sh fcos_pix2pix_p03_eval_real_data $config outputs/train/fcos3d_ft_pix2pix_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.3/epoch_6.pth $data_root nuscenes_infos_val_clear.pkl
+WANDB_GROUP=test_fcos sbatch scripts/single_test_berzelius.sh fcos_pix2pix_p05_eval_real_data $config outputs/train/fcos3d_ft_pix2pix_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.5/epoch_6.pth $data_root nuscenes_infos_val_clear.pkl
+WANDB_GROUP=test_fcos sbatch scripts/single_test_berzelius.sh fcos_pix2pix_p07_eval_real_data $config outputs/train/fcos3d_ft_pix2pix_sweeps_eval_sim/train_dataloader.dataset.pipeline.0.data_root_switch_p_0.7/epoch_6.pth $data_root nuscenes_infos_val_clear.pkl
