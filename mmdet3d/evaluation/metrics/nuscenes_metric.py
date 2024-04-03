@@ -1,5 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import json
 import tempfile
+from collections import defaultdict
 from os import path as osp
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -96,7 +98,9 @@ class NuScenesMetric(BaseMetric):
                  jsonfile_prefix: Optional[str] = None,
                  eval_version: str = 'detection_cvpr_2019',
                  collect_device: str = 'cpu',
-                 backend_args: Optional[dict] = None) -> None:
+                 backend_args: Optional[dict] = None,
+                 nusc2nerf_transform_path='',
+                 shift=[0.0, 0.0, 0.0]) -> None:
         self.default_prefix = 'NuScenes metric'
         super(NuScenesMetric, self).__init__(
             collect_device=collect_device, prefix=prefix)
@@ -121,6 +125,18 @@ class NuScenesMetric(BaseMetric):
 
         self.eval_version = eval_version
         self.eval_detection_configs = config_factory(self.eval_version)
+
+        print('Loading nuscenes metric with nusc2nerf_transform_path: ',
+              nusc2nerf_transform_path, ' and shift: ', shift)
+        shift = np.array(shift)
+        self.shifts = defaultdict(lambda: np.zeros(3))
+        if len(nusc2nerf_transform_path):
+            with open(nusc2nerf_transform_path, 'rb') as f:
+                self.shifts = {
+                    key: (np.array(val)[:3, :3].T @ shift.reshape(3, 1)
+                          ).flatten()  #inv(nusc2nerf) @ shift => shift in nusc
+                    for key, val in json.load(f).items()
+                }
 
     def process(self, data_batch: dict, data_samples: Sequence[dict]) -> None:
         """Process one batch of data samples and predictions.
@@ -182,8 +198,9 @@ class NuScenesMetric(BaseMetric):
         if tmp_dir is not None:
             tmp_dir.cleanup()
         return metric_dict
-    
-    def compute_metrics_from_formatted(self, result_dict: dict) -> Dict[str, float]:
+
+    def compute_metrics_from_formatted(self,
+                                       result_dict: dict) -> Dict[str, float]:
         """Compute the metrics from processed results.
 
         Args:
@@ -209,7 +226,6 @@ class NuScenesMetric(BaseMetric):
                 metric_dict[result] = ap_dict[result]
 
         return metric_dict
-
 
     def nus_evaluate(self,
                      result_dict: dict,
@@ -264,10 +280,12 @@ class NuScenesMetric(BaseMetric):
             'v1.0-mini': 'mini_val',
             'v1.0-trainval': 'val',
         }
-        if self.ann_file.strip(".pkl").endswith("val_clear"):
-            eval_set = "val_subset"
-        elif self.ann_file.strip(".pkl").endswith("val_clear_mini"):
-            eval_set = "val_subset_mini"
+        if self.ann_file.strip('.pkl').endswith('val_clear'):
+            eval_set = 'val_subset'
+        elif self.ann_file.strip('.pkl').endswith('val_clear_mini'):
+            eval_set = 'val_subset_mini'
+        elif self.ann_file.strip('.pkl').endswith('val_clear_shifted'):
+            eval_set = 'val_subset_shifted'
         else:
             eval_set = eval_set_map[self.version]
         nusc_eval = NuScenesEval(
@@ -275,6 +293,7 @@ class NuScenesMetric(BaseMetric):
             config=self.eval_detection_configs,
             result_path=result_path,
             eval_set=eval_set,
+            shifts=self.shifts,
             output_dir=output_dir,
             verbose=False)
         nusc_eval.main(render_curves=False)

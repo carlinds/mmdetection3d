@@ -6,6 +6,7 @@ import json
 import os
 import random
 import time
+from collections import defaultdict
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -50,6 +51,7 @@ class DetectionEval:
                  config: DetectionConfig,
                  result_path: str,
                  eval_set: str,
+                 shifts=defaultdict(lambda: np.zeros(3)),
                  output_dir: str = None,
                  verbose: bool = True):
         """Initialize a DetectionEval object.
@@ -87,6 +89,22 @@ class DetectionEval:
             self.cfg.max_boxes_per_sample,
             DetectionBox,
             verbose=verbose)
+
+        print_once = True
+        for sample_token in self.pred_boxes.sample_tokens:
+            scene_token = nusc.get('sample', sample_token)['scene_token']
+            scene_num = nusc.get('scene', scene_token)['name'].split('-')[-1]
+            curr_shift = shifts[scene_num]
+            if print_once:
+                print(f'Shifting scene {scene_num} by {curr_shift}')
+                print_once = False
+            for box in self.pred_boxes[sample_token]:
+                box.translation = tuple([
+                    box.translation[0] + curr_shift[0],
+                    box.translation[1] + curr_shift[1],
+                    box.translation[2] + curr_shift[2]
+                ])
+
         self.gt_boxes = load_gt(
             self.nusc, self.eval_set, DetectionBox, verbose=verbose)
 

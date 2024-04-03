@@ -161,7 +161,9 @@ val_evaluator = dict(
     data_root=data_root,
     ann_file=data_root + 'nuscenes_infos_val.pkl',
     metric='bbox',
-    backend_args=backend_args)
+    backend_args=backend_args,
+    nusc2nerf_transform_path='',
+    shift=[0.0, 0.0, 0.0])
 test_evaluator = val_evaluator
 
 vis_backends = [dict(type='LocalVisBackend')]
